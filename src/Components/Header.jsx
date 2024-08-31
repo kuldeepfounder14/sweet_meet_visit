@@ -16,13 +16,13 @@ function Header() {
                     />
                 </Link> */}
                 <div className='text-white'>Logo</div>
-                <nav className="hidden md:block p-4 text-white">
+                {/* <nav className="hidden md:block p-4 text-white">
                     <ul className="flex justify-between items-center gap-2 xsm:gap-5">
                         <li>
                             <a href="#home" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 ">All</a>
                         </li>
                         <li>
-                            <a href="#middle" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 ">India</a>
+                            <a href="#middle" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 "> India</a>
                         </li>
                         <li>
                             <a href="#footer" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 ">Pakistan</a>
@@ -31,7 +31,7 @@ function Header() {
                             <a href="#footer" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 ">Philippines</a>
                         </li>
                     </ul>
-                </nav>
+                </nav> */}
             </div>
         </>
     );

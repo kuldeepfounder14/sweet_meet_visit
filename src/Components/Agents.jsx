@@ -137,24 +137,24 @@ const data = [
 function Agents() {
     return (
         <>
-            <ul className="flex md:hidden justify-between items-center gap-3 xsm:gap-5 px-5 xsm:px-10 overflow-scroll my-5">
+            <ul className="flex justify-between items-center gap-3 xsm:gap-5 px-5 xsm:px-10 overflow-x-auto my-5">
                 <li>
-                    <a href="#home" className=" focus:underline  rounded-md text-lg  text-nowrap font-medium hover:text-gray-300 ">All</a>
+                    <a href="#home" className=" bg-bg1 text-white focus:bg-bg1 focus:text-white px-2 py-1  rounded-md text-lg flex items-center gap-1  text-nowrap font-medium">All</a>
                 </li>
                 <li>
-                    <a href="#middle" className=" focus:underline  rounded-md text-lg  text-nowrap font-medium hover:text-gray-300 ">India</a>
+                    <a href="#middle" className="  focus:bg-bg1 focus:text-white px-2 py-1  rounded-md text-lg flex items-center gap-1  text-nowrap font-medium"><FaFlag /> India</a>
                 </li>
                 <li>
-                    <a href="#footer" className=" focus:underline  rounded-md text-lg  text-nowrap font-medium hover:text-gray-300 ">Pakistan</a>
+                    <a href="#footer" className="  focus:bg-bg1 focus:text-white px-2 py-1   rounded-md text-lg flex items-center gap-1  text-nowrap font-medium"> <FaFlag />Pakistan</a>
                 </li>
                 <li>
-                    <a href="#footer" className=" focus:underline  rounded-md text-lg  text-nowrap font-medium hover:text-gray-300 ">Philippines</a>
+                    <a href="#footer" className="  focus:bg-bg1 focus:text-white px-2 py-1   rounded-md text-lg flex items-center gap-1  text-nowrap font-medium"> <FaFlag /> Philippines</a>
                 </li>
                 <li>
-                    <a href="#footer" className=" focus:underline  rounded-md text-lg  text-nowrap font-medium hover:text-gray-300 ">Sri Lanka</a>
+                    <a href="#footer" className="  focus:bg-bg1 focus:text-white px-2 py-1   rounded-md text-lg flex items-center gap-1  text-nowrap font-medium"><FaFlag /> Sri Lanka</a>
                 </li>
                 <li>
-                    <a href="#footer" className=" focus:underline  rounded-md text-lg  text-nowrap font-medium hover:text-gray-300 ">Nepal</a>
+                    <a href="#footer" className="  focus:bg-bg1 focus:text-white px-2 py-1   rounded-md text-lg flex items-center gap-1  text-nowrap font-medium"><FaFlag /> Nepal</a>
                 </li>
             </ul>
             <div className="flex flex-wrap justify-center">
