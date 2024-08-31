@@ -15,20 +15,22 @@ function Header() {
                         alt="not found"
                     />
                 </Link> */}
-                <div>Logo</div>
-                <nav className=" p-4 text-white">
-                    {/* <ul className="flex justify-between items-center xsm:gap-5">
+                <div className='text-white'>Logo</div>
+                <nav className="hidden md:block p-4 text-white">
+                    <ul className="flex justify-between items-center gap-2 xsm:gap-5">
                         <li>
-                            <a href="#home" className="text-white px-3 py-2 rounded-md text-lg   font-medium hover:text-gray-300 ">Home</a>
+                            <a href="#home" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 ">All</a>
                         </li>
                         <li>
-                            <a href="#middle" className="text-white px-3 py-2 rounded-md text-lg   font-medium hover:text-gray-300 ">Middle</a>
+                            <a href="#middle" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 ">India</a>
                         </li>
                         <li>
-                            <a href="#footer" className="text-white px-3 py-2 rounded-md text-lg   font-medium hover:text-gray-300 ">Footer</a>
+                            <a href="#footer" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 ">Pakistan</a>
                         </li>
-                    </ul> */}
-                    Sweet Meet
+                        <li>
+                            <a href="#footer" className="text-white focus:underline  rounded-md text-lg   font-medium hover:text-gray-300 ">Philippines</a>
+                        </li>
+                    </ul>
                 </nav>
             </div>
         </>
