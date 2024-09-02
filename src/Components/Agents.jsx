@@ -156,6 +156,9 @@ function Agents() {
                 <li>
                     <a href="#footer" className="  focus:bg-bg1 focus:text-white px-2 py-1   rounded-md text-lg flex items-center gap-1  text-nowrap font-medium"><FaFlag /> Nepal</a>
                 </li>
+                <li>
+                    <a href="#footer" className="  focus:bg-bg1 focus:text-white px-2 py-1   rounded-md text-lg flex items-center gap-1  text-nowrap font-medium"><FaFlag /> Bhutan</a>
+                </li>
             </ul>
             <div className="flex flex-wrap justify-center">
                 {data.map((item, index) => (
