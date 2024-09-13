@@ -160,8 +160,6 @@ function Agents() {
 
     return (
         <>
-            {/* http://localhost:5173/agent/uid=3&rate=2700&images=[%7B%22gift_count%22:1,%22gift_image%22:%22image1.png%22,%22gift_name%22:%22bikani%22%7D,%7B%22gift_count%22:2,%22gift_image%22:%22image2%22,%22gift_name%22:%22sports%20car%22%7D] */}
-
             <ul className="flex justify-between items-center gap-3 xsm:gap-5 px-5 xsm:px-10 overflow-x-auto my-5">
                 <li>
                     <a href="#home" className=" bg-bg1 text-white focus:bg-bg1 focus:text-white px-2 py-1  rounded-md text-lg flex items-center gap-1  text-nowrap font-medium">All</a>
