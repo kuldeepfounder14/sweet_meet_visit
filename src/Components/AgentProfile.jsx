@@ -5,6 +5,8 @@ import likebg from "../assets/pic/phone/bubble-bj.png";
 import img3 from "../assets/img3.jpg";
 import { CiHeart, CiLocationOn, CiVideoOn, CiCamera, CiMicrophoneOn, CiMicrophoneOff } from "react-icons/ci";
 import { SlCallEnd } from "react-icons/sl";
+import { LuCameraOff } from 'react-icons/lu';
+import { MdOutlineFlipCameraIos } from 'react-icons/md';
 import { useLocation, useParams } from 'react-router-dom';
 import AgoraRTC from "agora-rtc-sdk-ng"; // Agora SDK
 
@@ -13,7 +15,9 @@ function AgentProfile() {
     const [isVideoCallActive, setIsVideoCallActive] = useState(false); // Manage video call UI state
     const [agoraClient, setAgoraClient] = useState(null); // Agora client state
     const [localTracks, setLocalTracks] = useState([]); // State to manage local tracks (audio/video)
-    const [cameraFacing, setCameraFacing] = useState('user'); // Track camera facing direction
+    const [remoteTracks, setRemoteTracks] = useState([]); // State to manage remote tracks
+    const [isFrontCamera, setIsFrontCamera] = useState(true); // State for front/back camera
+    const [availableCameras, setAvailableCameras] = useState([]); // List of video devices (cameras)
     const [isCameraOn, setIsCameraOn] = useState(true); // Track if the camera is on or off
 
     const { uid } = useParams();
@@ -26,34 +30,47 @@ function AgentProfile() {
     const imagesString = getQueryParams().get('images');
     const userId = 1234;
 
+    const imagesArray = imagesString ? imagesString.split(',') : [];
+
     const handlePrevClick = () => {
-        setCurrentSlide((prev) => (prev === 0 ? imagesString.length - 1 : prev - 1));
+        setCurrentSlide((prev) => (prev === 0 ? imagesArray.length - 1 : prev - 1));
     };
 
     const handleNextClick = () => {
-        setCurrentSlide((prev) => (prev === imagesString.length - 1 ? 0 : prev + 1));
+        setCurrentSlide((prev) => (prev === imagesArray.length - 1 ? 0 : prev + 1));
     };
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setCurrentSlide((prev) => (prev === imagesString.length - 1 ? 0 : prev + 1));
+            setCurrentSlide((prev) => (prev === imagesArray.length - 1 ? 0 : prev + 1));
         }, 2000);
-
         return () => clearInterval(interval);
-    }, [imagesString]);
+    }, [imagesArray]);
 
+    //started call process
     const startVideoCall = async () => {
+        if (isVideoCallActive) return; // Prevent reinitialization if the call is already active
+
         try {
-            const response = await fetch('http://localhost:3000/sweetmeet/agora/accesstoken?channelName=kd&uid=1234&role=publisher&expireTime=3600');
+            const response = await fetch('http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/accesstoken?channelName=kd&uid=1234&role=publisher&expireTime=3600');
+
+
+
             const data = await response.json();
 
             if (response.ok) {
                 const { agoraToken, channelName } = data;
+                if (!channelName || !agoraToken) {
+                    throw new Error("Invalid channelName or agoraToken");
+                }
                 const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                 setAgoraClient(client);
 
                 await client.join('c03a3f9678414dceb45332ac293e2ec4', channelName, agoraToken, userId);
 
+                // Get available cameras
+                const cameras = await AgoraRTC.getCameras();
+                setAvailableCameras(cameras);
                 const screenWidth = window.innerWidth;
                 let resolution;
 
@@ -69,15 +86,35 @@ function AgentProfile() {
 
                 // Adjust video encoder configuration based on screen size
                 cameraTrack.setEncoderConfiguration({
-                    resolution: resolution,
+                    resolution,
                     frameRate: 30,
                     bitrate: screenWidth <= 640 ? 500 : 1000,
                     orientationMode: 'adaptive',
                 });
 
                 cameraTrack.play('local-player');
-
                 await client.publish([microphoneTrack, cameraTrack]);
+
+                // Subscribe to remote users
+                client.on('user-published', async (user, mediaType) => {
+                    await client.subscribe(user, mediaType);
+                    if (mediaType === 'video') {
+                        const remoteVideoTrack = user.videoTrack;
+                        remoteVideoTrack.play('remote-player');
+                        setRemoteTracks(prev => [...prev, remoteVideoTrack]);
+                    }
+                    if (mediaType === 'audio') {
+                        const remoteAudioTrack = user.audioTrack;
+                        remoteAudioTrack.play();
+                    }
+                });
+
+                client.on('user-unpublished', (user) => {
+                    const remoteTracksToRemove = remoteTracks.filter(track => track.getId() === user.uid);
+                    remoteTracksToRemove.forEach(track => track.stop());
+                    setRemoteTracks(prev => prev.filter(track => track.getId() !== user.uid));
+                });
+
                 setIsVideoCallActive(true);
             }
         } catch (err) {
@@ -93,45 +130,35 @@ function AgentProfile() {
         }
     };
 
+    // Switch between front and back cameras
+    const switchCamera = async () => {
+        if (!localTracks[1] || availableCameras.length <= 1) return;
+
+        try {
+            // Toggle between front and back cameras
+            const newCameraDeviceId = isFrontCamera ? availableCameras[1].deviceId : availableCameras[0].deviceId;
+            await localTracks[1].setDevice(newCameraDeviceId);
+
+            setIsFrontCamera(!isFrontCamera);
+        } catch (error) {
+            console.error("Error switching camera:", error);
+        }
+    };
+
     const handleCameraToggle = async () => {
         try {
-            if (isCameraOn) {
-                // If camera is currently on, turn it off
-                const cameraTrack = localTracks[1];
-                cameraTrack.stop();
-                cameraTrack.close();
-    
-                // Remove the camera track from local tracks
-                setLocalTracks([localTracks[0]]);
-                
-                // Notify Agora client to unpublish the camera track
-                await agoraClient.unpublish(cameraTrack);
-                
-                setIsCameraOn(false); // Update state to reflect camera is off
-            } else {
-                // If camera is currently off, turn it on
-                const cameraId = cameraFacing === 'user' ? 'environment' : 'user';
-                const newCameraTrack = await AgoraRTC.createCameraVideoTrack({ cameraId });
-                setCameraFacing(cameraFacing === 'user' ? 'environment' : 'user');
-    
-                // Add the new camera track to local tracks
-                const updatedLocalTracks = [localTracks[0], newCameraTrack];
-                setLocalTracks(updatedLocalTracks);
-    
-                // Publish the new camera track
-                await agoraClient.publish([newCameraTrack]);
-                
-                // Play the new camera track
-                newCameraTrack.play('local-player');
-    
-                setIsCameraOn(true); // Update state to reflect camera is on
+            if (localTracks[1]) {
+                if (isCameraOn) {
+                    await localTracks[1].setEnabled(false); // Mute the camera
+                } else {
+                    await localTracks[1].setEnabled(true); // Unmute the camera
+                }
+                setIsCameraOn(!isCameraOn);
             }
         } catch (error) {
             console.error("Error toggling camera:", error);
-            alert("Failed to toggle camera. Please check camera permissions and try again.");
         }
     };
-    
 
     const endCall = async () => {
         try {
@@ -291,17 +318,29 @@ function AgentProfile() {
                 </div>
             </div>}
 
+
             {/* Video call UI */}
             {isVideoCallActive && (
-                <div className="absolute z-50 bottom-0 left-0 right-0 bg-black/80 p-4 flex justify-around items-center">
+                <div className="absolute z-50 top-0 left-0 right-0 bg-black/30 p-4 flex justify-around items-center">
+                    <div className='text-white font-bold'>{name}/{age} years old</div>
+                </div>
+            )}
+            {isVideoCallActive && (
+                <div className="absolute z-50 bottom-0 left-0 right-0 bg-black/30 p-4 flex justify-around items-center">
                     {localTracks[0]?.muted ? <button onClick={handleMicToggle} className="text-white">
-                        <CiMicrophoneOff size={24} />
+                        <CiMicrophoneOn size={24} />
                     </button> :
                         <button onClick={handleMicToggle}>
-                            <CiMicrophoneOn size={24} className="text-white" />
+                            <CiMicrophoneOff size={24} className="text-white" />
                         </button>}
                     <button onClick={handleCameraToggle} className="text-white">
-                        <CiCamera size={24} />
+                        {isCameraOn ? <LuCameraOff size={22} />
+                            : <CiCamera size={24} />}
+                    </button>
+                    <button onClick={switchCamera}>
+                        {isFrontCamera ? <MdOutlineFlipCameraIos size={24} className="text-white" />
+                            : <MdOutlineFlipCameraIos size={24} className="text-white" />
+                        }
                     </button>
                     <button onClick={endCall} className="text-red-600">
                         <SlCallEnd size={24} />
@@ -309,7 +348,10 @@ function AgentProfile() {
                 </div>
             )}
             {console.log(isVideoCallActive)}
-            <div id="local-player" className={`absolute  w-full ${isVideoCallActive ? "h-full" : "h-0"}  aspect-w-16 aspect-h-9`}></div>
+            <div className="flex flex-1">
+                <div id="remote-player" className={`absolute w-full ${isVideoCallActive ? "h-full" : "h-0"}`}></div>
+                <div id="local-player" className={`absolute  w-full ${isVideoCallActive ? "h-full" : "h-0"}  aspect-w-16 aspect-h-9`}></div>
+            </div>
 
 
         </>

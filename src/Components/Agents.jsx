@@ -239,7 +239,7 @@ function Agents() {
                                         <p className="text-xl">{item.username}</p>
                                         <p className="text-xl flex items-center gap-1">{item.flag}
                                             {(() => {
-                                                switch (item.details.agent_location) {
+                                                switch (item.location) {
                                                     case 1:
                                                         return "India"
                                                 }
