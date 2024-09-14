@@ -28,7 +28,7 @@ function AgentProfile() {
     const age = getQueryParams().get('age');
     const location = getQueryParams().get('location');
     const imagesString = getQueryParams().get('images');
-    const userId = 1234;
+    const userId = 23;
 
     const imagesArray = imagesString ? imagesString.split(',') : [];
 
@@ -52,7 +52,7 @@ function AgentProfile() {
         if (isVideoCallActive) return; // Prevent reinitialization if the call is already active
 
         try {
-            const response = await fetch('http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/accesstoken?channelName=kd&uid=1234&role=publisher&expireTime=3600');
+            const response = await fetch(`http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/accesstoken?channelName=kd&uid=${userId}&role=publisher&expireTime=3600`);
 
 
 
@@ -160,25 +160,66 @@ function AgentProfile() {
         }
     };
 
+    // Function to convert UTC to IST in frontend
+    const getIndianTime = () => {
+        const utcDate = new Date();
+    
+        // IST offset is UTC + 5 hours 30 minutes (5.5 hours)
+        const istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
+        const istDate = new Date(utcDate.getTime() + istOffset); // Convert to IST
+    
+        // Format the date to 'YYYY-MM-DD HH:MM:SS' for sending to the backend
+        return istDate.toISOString().slice(0, 19).replace('T', ' ');
+    };
+    
     const endCall = async () => {
         try {
             if (agoraClient) {
-                // Leave the channel
                 await agoraClient.leave();
                 console.log('Left the channel');
             }
-
+    
             if (localTracks) {
-                // Stop and close all tracks
                 localTracks.forEach(track => track.stop());
                 localTracks.forEach(track => track.close());
             }
-
-            setIsVideoCallActive(false); // Hide video call UI
+    
+            setIsVideoCallActive(false);
+    
+            // Get current timestamp in IST
+            const callEndTimestamp = getIndianTime();
+    
+            const response = await fetch('http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/createcallrecords', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    caller_id: userId,
+                    receiver_id: uid,
+                    call_end: callEndTimestamp  // Already in IST
+                })
+            });
+    
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Failed to create call record:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const result = await response.json();
+            if (result.success) {
+                console.log('Call record created successfully');
+            } else {
+                console.error('Failed to create call record:', result.message);
+            }
+    
         } catch (error) {
             console.error('Error ending the call:', error);
         }
     };
+    
+
 
     return (
         <>
