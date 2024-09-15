@@ -9,6 +9,7 @@ import { LuCameraOff } from 'react-icons/lu';
 import { MdOutlineFlipCameraIos } from 'react-icons/md';
 import { useLocation, useParams } from 'react-router-dom';
 import AgoraRTC from "agora-rtc-sdk-ng"; // Agora SDK
+import axios from 'axios';
 
 function AgentProfile() {
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -19,6 +20,8 @@ function AgentProfile() {
     const [isFrontCamera, setIsFrontCamera] = useState(true); // State for front/back camera
     const [availableCameras, setAvailableCameras] = useState([]); // List of video devices (cameras)
     const [isCameraOn, setIsCameraOn] = useState(true); // Track if the camera is on or off
+    const [currentCallId, setCurrentCallId] = useState(null); // Track if the camera is on or off
+    const [isMicMuted, setIsMicMuted] = useState(localTracks[0]?.muted || false); // Initialize state
 
     const { uid } = useParams();
     const locations = useLocation();
@@ -29,6 +32,7 @@ function AgentProfile() {
     const location = getQueryParams().get('location');
     const imagesString = getQueryParams().get('images');
     const userId = 23;
+    const appID = "c03a3f9678414dceb45332ac293e2ec4";
 
     const imagesArray = imagesString ? imagesString.split(',') : [];
 
@@ -49,87 +53,107 @@ function AgentProfile() {
 
     //started call process
     const startVideoCall = async () => {
-        if (isVideoCallActive) return; // Prevent reinitialization if the call is already active
-
+        if (isVideoCallActive) return;
         try {
-            const response = await fetch(`http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/accesstoken?channelName=kd&uid=${userId}&role=publisher&expireTime=3600`);
+            // const callStartResponse = await axios.post('http://localhost:3000/sweetmeet/agora/call/notify', {
+            const callStartResponse = await axios.post('http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/call/notify', {
+                caller_id: userId,
+                receiver_id: uid,
+                call_start: getIndianTime()
+            });
 
+            if (callStartResponse.data) {
+                const callId = callStartResponse?.data.callId;
+                console.log('Call started, ID:', callId[0].insertId);
+                setCurrentCallId(callId[0].insertId);
 
+                console.log('Call start notification sent successfully');
 
-            const data = await response.json();
+                // const response = await axios.get(http://localhost:3000/sweetmeet/agora/accesstoken, {
+                const response = await axios.get("http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/accesstoken", {
+                    params: {
+                        channelName: ` sweetmeet-${userId}`,
+                        uid: userId,
+                        userRole: 'user',
+                        expireTime: 3600
+                    }
+                });
 
-            if (response.ok) {
+                const data = response.data;
                 const { agoraToken, channelName } = data;
                 if (!channelName || !agoraToken) {
-                    throw new Error("Invalid channelName or agoraToken");
+                    console.log("channelName ,agoraToken not found")
                 }
-                const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-                setAgoraClient(client);
+                if (channelName && agoraToken) {
+                    console.log("channelName", channelName)
+                    console.log("agoraToken", agoraToken)
+                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    setAgoraClient(client);
 
-                await client.join('c03a3f9678414dceb45332ac293e2ec4', channelName, agoraToken, userId);
+                    await client.join(appID, channelName, agoraToken, userId)
+                        .then(() => {
+                            console.log("Successfully joined the channel");
+                        })
+                        .catch((error) => {
+                            console.error("Error in joining channel:", error);
+                        });
+                    const cameras = await AgoraRTC.getCameras();
+                    setAvailableCameras(cameras);
 
-                // Get available cameras
-                const cameras = await AgoraRTC.getCameras();
-                setAvailableCameras(cameras);
-                const screenWidth = window.innerWidth;
-                let resolution;
+                    const resolution = window.innerWidth <= 640 ? { width: 640, height: 360 } : { width: 1280, height: 720 };
 
-                if (screenWidth <= 640) {
-                    resolution = { width: 640, height: 360 };
+                    const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+                    setLocalTracks([microphoneTrack, cameraTrack]);
+
+                    cameraTrack.setEncoderConfiguration({
+                        resolution,
+                        frameRate: 30,
+                        bitrate: window.innerWidth <= 640 ? 500 : 1000,
+                        orientationMode: 'adaptive'
+                    });
+
+                    cameraTrack.play('local-player');
+                    await client.publish([microphoneTrack, cameraTrack]);
+
+                    client.on('user-published', async (user, mediaType) => {
+                        await client.subscribe(user, mediaType);
+                        if (mediaType === 'video') {
+                            const remoteVideoTrack = user.videoTrack;
+                            remoteVideoTrack.play('remote-player');
+                            setRemoteTracks(prev => [...prev, remoteVideoTrack]);
+                        }
+                        if (mediaType === 'audio') {
+                            user.audioTrack.play();
+                        }
+                    });
+
+                    client.on('user-unpublished', (user) => {
+                        console.log(user)
+                        const remoteTracksToRemove = remoteTracks.filter(track => track.getId() === user.uid);
+                        remoteTracksToRemove.forEach(track => track.stop());
+                        setRemoteTracks(prev => prev.filter(track => track.getId() !== user.uid));
+                    });
+
+                    setIsVideoCallActive(true);
                 } else {
-                    resolution = { width: 1280, height: 720 };
+                    console.error("Invalid channelName or agoraToken");
                 }
-
-                // Create microphone and camera tracks
-                const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-                setLocalTracks([microphoneTrack, cameraTrack]);
-
-                // Adjust video encoder configuration based on screen size
-                cameraTrack.setEncoderConfiguration({
-                    resolution,
-                    frameRate: 30,
-                    bitrate: screenWidth <= 640 ? 500 : 1000,
-                    orientationMode: 'adaptive',
-                });
-
-                cameraTrack.play('local-player');
-                await client.publish([microphoneTrack, cameraTrack]);
-
-                // Subscribe to remote users
-                client.on('user-published', async (user, mediaType) => {
-                    await client.subscribe(user, mediaType);
-                    if (mediaType === 'video') {
-                        const remoteVideoTrack = user.videoTrack;
-                        remoteVideoTrack.play('remote-player');
-                        setRemoteTracks(prev => [...prev, remoteVideoTrack]);
-                    }
-                    if (mediaType === 'audio') {
-                        const remoteAudioTrack = user.audioTrack;
-                        remoteAudioTrack.play();
-                    }
-                });
-
-                client.on('user-unpublished', (user) => {
-                    const remoteTracksToRemove = remoteTracks.filter(track => track.getId() === user.uid);
-                    remoteTracksToRemove.forEach(track => track.stop());
-                    setRemoteTracks(prev => prev.filter(track => track.getId() !== user.uid));
-                });
-
-                setIsVideoCallActive(true);
+            } else {
+                console.error('Error sending call start notification:', callStartResponse.data.message);
             }
         } catch (err) {
-            console.error("Error in video call:", err);
+            console.error("Error in video call:", err.response ? err.response.data : err.message);
         }
     };
-
 
     const handleMicToggle = () => {
         if (localTracks[0]) {
             const micTrack = localTracks[0];
             micTrack.setMuted(!micTrack.muted);
+            setIsMicMuted(!micTrack.muted); // Update the state to trigger a re-render
         }
     };
-
+    console.log(isMicMuted)
     // Switch between front and back cameras
     const switchCamera = async () => {
         if (!localTracks[1] || availableCameras.length <= 1) return;
@@ -149,9 +173,9 @@ function AgentProfile() {
         try {
             if (localTracks[1]) {
                 if (isCameraOn) {
-                    await localTracks[1].setEnabled(false); // Mute the camera
+                    await localTracks[1].setEnabled(false);
                 } else {
-                    await localTracks[1].setEnabled(true); // Unmute the camera
+                    await localTracks[1].setEnabled(true);
                 }
                 setIsCameraOn(!isCameraOn);
             }
@@ -163,64 +187,63 @@ function AgentProfile() {
     // Function to convert UTC to IST in frontend
     const getIndianTime = () => {
         const utcDate = new Date();
-    
+
         // IST offset is UTC + 5 hours 30 minutes (5.5 hours)
         const istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
         const istDate = new Date(utcDate.getTime() + istOffset); // Convert to IST
-    
+
         // Format the date to 'YYYY-MM-DD HH:MM:SS' for sending to the backend
         return istDate.toISOString().slice(0, 19).replace('T', ' ');
     };
-    
+
     const endCall = async () => {
+        console.log("currentCallId", currentCallId)
         try {
             if (agoraClient) {
                 await agoraClient.leave();
                 console.log('Left the channel');
             }
-    
+
             if (localTracks) {
                 localTracks.forEach(track => track.stop());
                 localTracks.forEach(track => track.close());
             }
-    
+
             setIsVideoCallActive(false);
-    
+
             // Get current timestamp in IST
             const callEndTimestamp = getIndianTime();
-    
-            const response = await fetch('http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/createcallrecords', {
+
+            // const response = await fetch('http://localhost:3000/sweetmeet/agora/updateCallRecords', {
+            const response = await fetch('http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/updateCallRecords', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    caller_id: userId,
-                    receiver_id: uid,
-                    call_end: callEndTimestamp  // Already in IST
+                    call_id: currentCallId,
+                    // receiver_id: uid,
+                    call_end: callEndTimestamp
                 })
             });
-    
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('Failed to create call record:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error({ status: `${response.status}` });
             }
-    
+
             const result = await response.json();
             if (result.success) {
                 console.log('Call record created successfully');
             } else {
                 console.error('Failed to create call record:', result.message);
             }
-    
+
         } catch (error) {
             console.error('Error ending the call:', error);
         }
     };
-    
-
-
     return (
         <>
             {/* After SM screen */}
@@ -368,8 +391,8 @@ function AgentProfile() {
             )}
             {isVideoCallActive && (
                 <div className="absolute z-50 bottom-0 left-0 right-0 bg-black/30 p-4 flex justify-around items-center">
-                    {localTracks[0]?.muted ? <button onClick={handleMicToggle} className="text-white">
-                        <CiMicrophoneOn size={24} />
+                    {isMicMuted ? <button onClick={handleMicToggle} className="text-white">
+                        <CiMicrophoneOn className='text-white' size={24} />
                     </button> :
                         <button onClick={handleMicToggle}>
                             <CiMicrophoneOff size={24} className="text-white" />

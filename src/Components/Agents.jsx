@@ -142,8 +142,8 @@ function Agents() {
 
     const getAgents = async () => {
         try {
-            const res = await axios.get("http://localhost:3000/sweetmeet/allusers")
-            // const res = await axios.get("http://sweet_meet_backend.fapjoymall.com/sweetmeet/allusers")
+            // const res = await axios.get("http://localhost:3000/sweetmeet/allusers")
+            const res = await axios.get("http://sweet_meet_backend.fapjoymall.com/sweetmeet/allusers")
             console.log(res)
             const filteredUsers = res?.data?.allUsers?.filter(item => item?.role === "agent")
             console.log(filteredUsers)
