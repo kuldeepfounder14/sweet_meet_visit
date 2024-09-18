@@ -1,0 +1,130 @@
+Container for the entire room
+.room {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f5f5f5;
+    padding: 20px;
+  }
+  
+  /* Styles for the join room section */
+  .join-room {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .join-room input {
+    margin: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 300px;
+  }
+  
+  .join-room button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .join-room button.disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+  }
+  
+  /* Styles for the user list and individual users */
+  .user-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  
+  .user {
+    position: relative;
+    width: 200px;
+    height: 150px;
+    background-color: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .user .user-name {
+    color: #fff;
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+  }
+  
+  /* Styles for the control panel */
+  .control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+  }
+  
+  .left-control {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+  }
+  
+  .btn {
+    padding: 10px;
+    border: none;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .btn.bg-black {
+    background-color: #000;
+  }
+  
+  .btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .btn.off {
+    opacity: 0.5;
+  }
+  
+  .btn-phone {
+    padding: 15px;
+    background-color: #28a745;
+    font-size: 24px;
+  }
+  
+  .btn-phone-active {
+    background-color: #dc3545;
+  }
+  
+  .btn-phone .i-phone-hangup {
+    color: #fff;
+  }
+  
+  .btn-phone .i-mdi-phone {
+    color: #fff;
+  }
+  

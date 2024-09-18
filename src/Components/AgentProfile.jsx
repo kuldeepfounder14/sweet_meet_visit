@@ -8,7 +8,7 @@ import { SlCallEnd } from "react-icons/sl";
 import { LuCameraOff } from 'react-icons/lu';
 import { MdOutlineFlipCameraIos } from 'react-icons/md';
 import { useLocation, useParams } from 'react-router-dom';
-import AgoraRTC from "agora-rtc-sdk-ng"; // Agora SDK
+import AgoraRTC from "agora-rtc-sdk-ng";
 import axios from 'axios';
 
 function AgentProfile() {
@@ -31,8 +31,8 @@ function AgentProfile() {
     const age = getQueryParams().get('age');
     const location = getQueryParams().get('location');
     const imagesString = getQueryParams().get('images');
-    const userId = 23;
-    const appID = "c03a3f9678414dceb45332ac293e2ec4";
+    const userId = "23";
+    const appID = "5e2f210be7e94b73af9b81ae44138cca";
 
     const imagesArray = imagesString ? imagesString.split(',') : [];
 
@@ -72,10 +72,10 @@ function AgentProfile() {
                 // const response = await axios.get(http://localhost:3000/sweetmeet/agora/accesstoken, {
                 const response = await axios.get("http://sweet_meet_backend.fapjoymall.com/sweetmeet/agora/accesstoken", {
                     params: {
-                        channelName: ` sweetmeet-${userId}`,
-                        uid: userId,
-                        userRole: 'user',
-                        expireTime: 3600
+                        channelName: `sweetmeet-${userId}`,
+                        uid: 0,
+                        role: 'publisher',
+                        expiry: 3600
                     }
                 });
 
@@ -89,8 +89,9 @@ function AgentProfile() {
                     console.log("agoraToken", agoraToken)
                     const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     setAgoraClient(client);
-
-                    await client.join(appID, channelName, agoraToken, userId)
+                    // const token = "006c03a3f9678414dceb45332ac293e2ec4IABb99mCeCfn0wgZdU/R+Zkr5pJiH79/u5OtetfO0gmuvUDa2pMh39v0IgArT7J7ywDsZgQAAQBbvepmAgBbvepmAwBbvepmBABbvepm"
+                    // const channel = "sweetmeet-23"
+                    await client.join(appID, channelName, agoraToken || null, userId || null)
                         .then(() => {
                             console.log("Successfully joined the channel");
                         })
@@ -116,19 +117,29 @@ function AgentProfile() {
                     await client.publish([microphoneTrack, cameraTrack]);
 
                     client.on('user-published', async (user, mediaType) => {
-                        await client.subscribe(user, mediaType);
-                        if (mediaType === 'video') {
-                            const remoteVideoTrack = user.videoTrack;
-                            remoteVideoTrack.play('remote-player');
-                            setRemoteTracks(prev => [...prev, remoteVideoTrack]);
-                        }
-                        if (mediaType === 'audio') {
-                            user.audioTrack.play();
+                        if (user) {
+                            console.log(`Subscribing to remote user: ${user.uid}`);
+                            alert(`Subscribing to remote user: ${user.uid}`);
+                            await client.subscribe(user, mediaType);
+
+                            if (mediaType === 'video') {
+                                const remoteVideoTrack = user.videoTrack;
+                                remoteVideoTrack.play('remote-player');
+                                setRemoteTracks(prev => [...prev, remoteVideoTrack]);
+                            }
+                            if (mediaType === 'audio') {
+                                user.audioTrack.play();
+                            }
+                        } else {
+                            console.log(`No remote user subscribed`);
+                            alert(`No remote user subscribed`);
+
                         }
                     });
 
+
                     client.on('user-unpublished', (user) => {
-                        console.log(user)
+                        console.log("user-unpublished has left or stopped publishing", user)
                         const remoteTracksToRemove = remoteTracks.filter(track => track.getId() === user.uid);
                         remoteTracksToRemove.forEach(track => track.stop());
                         setRemoteTracks(prev => prev.filter(track => track.getId() !== user.uid));
@@ -145,6 +156,9 @@ function AgentProfile() {
             console.error("Error in video call:", err.response ? err.response.data : err.message);
         }
     };
+    console.log("remoteTracks", remoteTracks)
+
+
 
     const handleMicToggle = () => {
         if (localTracks[0]) {
@@ -154,7 +168,7 @@ function AgentProfile() {
         }
     };
     console.log(isMicMuted)
-    // Switch between front and back cameras
+
     const switchCamera = async () => {
         if (!localTracks[1] || availableCameras.length <= 1) return;
 
@@ -412,9 +426,9 @@ function AgentProfile() {
                 </div>
             )}
             {console.log(isVideoCallActive)}
-            <div className="flex flex-1">
-                <div id="remote-player" className={`absolute w-full ${isVideoCallActive ? "h-full" : "h-0"}`}></div>
-                <div id="local-player" className={`absolute  w-full ${isVideoCallActive ? "h-full" : "h-0"}  aspect-w-16 aspect-h-9`}></div>
+            <div className="flex justify-between">
+                <div id="remote-player" className={`absolute w-1/2 right-0 top-0 ${isVideoCallActive ? "h-full" : "h-0"} aspect-w-16 aspect-h-9`}></div>
+                <div id="local-player" className={`absolute  w-full left-0 top-0  ${isVideoCallActive ? "h-full" : "h-0"}  aspect-w-16 aspect-h-9`}></div>
             </div>
 
 
